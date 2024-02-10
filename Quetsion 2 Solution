@@ -1,0 +1,162 @@
+import pygame
+import sys
+
+# Initialize Pygame
+pygame.init()
+
+# Constants
+WIDTH, HEIGHT = 800, 600
+FPS = 60
+
+# Colors
+WHITE = (255, 255, 255)
+RED = (255, 0, 0)
+
+# Player Class
+class Player(pygame.sprite.Sprite):
+    def __init__(self):
+        super().__init__()
+        self.image = pygame.Surface((50, 50))
+        self.image.fill(WHITE)
+        self.rect = self.image.get_rect()
+        self.rect.center = (100, HEIGHT - 50)
+        self.speed = 5
+        self.jump_power = 15
+        self.health = 100
+        self.lives = 3
+        self.on_ground = True
+        self.jumping = False
+        self.jump_count = 10  # New variable to control jump height
+
+    def update(self):
+        self.handle_input()
+        self.apply_gravity()
+
+    def handle_input(self):
+        keys = pygame.key.get_pressed()
+        if keys[pygame.K_LEFT] and self.rect.left > 0:
+            self.rect.x -= self.speed
+        if keys[pygame.K_RIGHT] and self.rect.right < WIDTH:
+            self.rect.x += self.speed
+        if keys[pygame.K_SPACE]:
+            self.jump()
+
+    def jump(self):
+        if self.on_ground:
+            self.jumping = True
+
+    def apply_gravity(self):
+        if not self.on_ground or self.jumping:
+            if self.jump_count >= -10:
+                neg = 1
+                if self.jump_count < 0:
+                    neg = -1
+                self.rect.y -= (self.jump_count ** 2) * 0.5 * neg
+                self.jump_count -= 1
+            else:
+                self.rect.y = HEIGHT - self.rect.height
+                self.on_ground = True
+                self.jumping = False
+                self.jump_count = 10
+
+# Enemy Class
+class Enemy(pygame.sprite.Sprite):
+    def __init__(self, x, y):
+        super().__init__()
+        self.image = pygame.Surface((50, 50))
+        self.image.fill(RED)
+        self.rect = self.image.get_rect()
+        self.rect.topleft = (x, y)
+        self.speed = 3
+
+    def update(self):
+        self.rect.x -= self.speed
+
+# Projectile Class
+class Projectile(pygame.sprite.Sprite):
+    def __init__(self, x, y):
+        super().__init__()
+        self.image = pygame.Surface((10, 10))
+        self.image.fill(WHITE)
+        self.rect = self.image.get_rect()
+        self.rect.center = (x, y)
+        self.speed = 7
+
+    def update(self):
+        self.rect.x += self.speed
+
+# Collectible Class
+class Collectible(pygame.sprite.Sprite):
+    def __init__(self, x, y):
+        super().__init__()
+        # Implement collectible details here
+        pass
+
+# Set up the game window
+screen = pygame.display.set_mode((WIDTH, HEIGHT))
+pygame.display.set_caption("Side-Scrolling Game")
+
+# Create sprite groups
+all_sprites = pygame.sprite.Group()
+enemies = pygame.sprite.Group()
+projectiles = pygame.sprite.Group()
+collectibles = pygame.sprite.Group()
+
+# Create the player
+player = Player()
+all_sprites.add(player)
+
+# Create enemies for level 1
+for i in range(3):
+    enemy = Enemy(WIDTH + i * 200, HEIGHT - 50)
+    all_sprites.add(enemy)
+    enemies.add(enemy)
+
+clock = pygame.time.Clock()
+
+running = True
+while running:
+    clock.tick(FPS)
+
+    # Event handling
+    for event in pygame.event.get():
+        if event.type == pygame.QUIT:
+            running = False
+
+    # Update
+    all_sprites.update()
+
+    # Draw
+    screen.fill((0, 0, 0))
+    all_sprites.draw(screen)
+
+    # Display jump message
+    if player.jumping:
+        font = pygame.font.Font(None, 36)
+        jump_text = font.render("Jumping!", True, WHITE)
+        screen.blit(jump_text, (WIDTH // 2 - 50, 50))
+
+    # Collision checks
+    hits = pygame.sprite.spritecollide(player, enemies, False)
+    if hits:
+        player.health -= 10
+        if player.health <= 0:
+            player.lives -= 1
+            if player.lives <= 0:
+                running = False
+            else:
+                player.health = 100
+
+    # Draw health bar
+    pygame.draw.rect(screen, RED, (10, 10, player.health * 2, 20))
+
+    # Check if player reaches the end of the level
+    if player.rect.right >= WIDTH:
+        # Move to the next level or end the game if there are no more levels
+        pass
+
+    # Refresh the display
+    pygame.display.flip()
+
+pygame.quit()
+sys.exit()
